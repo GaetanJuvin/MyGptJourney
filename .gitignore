@@ -1,0 +1,17 @@
+# Ruby
+.bundle/
+*.gem
+vendor/
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
+
+# Checkpoints and outputs
+tiny_transformer.ckpt
+*.ckpt
+*.pt
+*.bin
+*.log
+

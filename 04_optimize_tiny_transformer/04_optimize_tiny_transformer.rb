@@ -14,18 +14,47 @@ module Checkpointing
   CKPT_PATH = "tiny_transformer.ckpt"
 
   def self.save!(model, chars, path = CKPT_PATH)
+    weights = {
+      E: model.E.data.to_a,
+      P: model.P.data.to_a,
+      W_Q: model.W_Q.data.to_a,
+      W_K: model.W_K.data.to_a,
+      W_V: model.W_V.data.to_a,
+      W_O: model.W_O.data.to_a,
+      W_out: model.W_out.data.to_a,
+      b_out: model.b_out.data.to_a
+    }
+    
     meta = {
       chars:   chars,
       d_model: model.d_model,
       max_len: model.max_len
     }
-    File.binwrite(path, Marshal.dump({ meta: meta }))
+    
+    payload = { meta: meta, weights: weights }
+    File.binwrite(path, Marshal.dump(payload))
     puts "[ckpt] saved to #{path}"
   end
 
   def self.load_meta(path = CKPT_PATH)
     payload = Marshal.load(File.binread(path))
     payload[:meta]
+  end
+
+  def self.load_weights!(model, path = CKPT_PATH)
+    payload = Marshal.load(File.binread(path))
+    weights = payload[:weights]
+    
+    model.E.data.copy!(Torch.tensor(weights[:E]))
+    model.P.data.copy!(Torch.tensor(weights[:P]))
+    model.W_Q.data.copy!(Torch.tensor(weights[:W_Q]))
+    model.W_K.data.copy!(Torch.tensor(weights[:W_K]))
+    model.W_V.data.copy!(Torch.tensor(weights[:W_V]))
+    model.W_O.data.copy!(Torch.tensor(weights[:W_O]))
+    model.W_out.data.copy!(Torch.tensor(weights[:W_out]))
+    model.b_out.data.copy!(Torch.tensor(weights[:b_out]))
+    
+    puts "[ckpt] loaded weights from #{path}"
   end
 end
 
@@ -268,6 +297,7 @@ if File.exist?(Checkpointing::CKPT_PATH)
     max_len:    meta[:max_len],
     seed:       7
   )
+  Checkpointing.load_weights!(model)
 else
   chars = train_text.chars.uniq.sort
   vocab_size = chars.length
